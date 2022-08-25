@@ -225,26 +225,7 @@ public class SharePlugin extends Plugin {
     public void share(Intent intent) {
         Bundle extras = intent.getExtras();
         if (extras != null) {
-            if (extras.containsKey(Intent.EXTRA_STREAM)) {
-
-                try {
-
-                    ArrayList<Uri> uriList;
-                    if (!Intent.ACTION_SEND.equals(intent.getAction())) {
-                        uriList = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
-                    } else {
-                        Uri uri = extras.getParcelable(Intent.EXTRA_STREAM);
-                        uriList = new ArrayList<>();
-                        uriList.add(uri);
-                    }
-
-                    sendUriList(uriList);
-                } catch (Exception e) {
-                    Log.e("ShareActivity", "Exception");
-                    e.printStackTrace();
-                }
-
-            } else if (extras.containsKey(Intent.EXTRA_TEXT)) {
+            if (extras.containsKey(Intent.EXTRA_TEXT)) {
                 String text = extras.getString(Intent.EXTRA_TEXT);
                 String subject = extras.getString(Intent.EXTRA_SUBJECT);
 
@@ -270,6 +251,25 @@ public class SharePlugin extends Plugin {
                     np.set("text", text);
                 }
                 device.sendPacket(np);
+            } else if (extras.containsKey(Intent.EXTRA_STREAM)) {
+
+                try {
+
+                    ArrayList<Uri> uriList;
+                    if (!Intent.ACTION_SEND.equals(intent.getAction())) {
+                        uriList = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+                    } else {
+                        Uri uri = extras.getParcelable(Intent.EXTRA_STREAM);
+                        uriList = new ArrayList<>();
+                        uriList.add(uri);
+                    }
+
+                    sendUriList(uriList);
+                } catch (Exception e) {
+                    Log.e("ShareActivity", "Exception");
+                    e.printStackTrace();
+                }
+
             }
         }
     }
