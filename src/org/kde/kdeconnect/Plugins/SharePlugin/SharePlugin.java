@@ -13,7 +13,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -23,6 +25,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 import androidx.core.content.ContextCompat;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.kde.kdeconnect.Helpers.FilesHelper;
 import org.kde.kdeconnect.Helpers.IntentHelper;
@@ -289,7 +292,11 @@ public class SharePlugin extends Plugin {
 
     @Override
     public String[] getOptionalPermissions() {
-        return new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return ArrayUtils.EMPTY_STRING_ARRAY;
+        } else {
+            return new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
+        }
     }
 
     private class Callback implements BackgroundJob.Callback<Void> {
