@@ -130,12 +130,7 @@ public class SharePlugin extends Plugin {
             }
 
             if (np.has("filename")) {
-                if (isPermissionGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                    receiveFile(np);
-                } else {
-                    Log.i("SharePlugin", "no Permission for Storage");
-                }
-
+                receiveFile(np);
             } else if (np.has("text")) {
                 Log.i("SharePlugin", "hasText");
                 receiveText(np);
