@@ -212,7 +212,7 @@ public class MprisReceiverPlugin extends Plugin {
             np.set("nowPlaying", player.getArtist() + " - " + player.getTitle());
         }
         np.set("title", player.getTitle());
-        np.set("artist", player.getArtist());
+        np.set("artist", List.of(player.getArtist()));
         np.set("album", player.getAlbum());
         np.set("isPlaying", player.isPlaying());
         np.set("pos", player.getPosition());

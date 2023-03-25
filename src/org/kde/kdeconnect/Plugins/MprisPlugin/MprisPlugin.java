@@ -39,7 +39,7 @@ public class MprisPlugin extends Plugin {
         private boolean playing = false;
         private String currentSong = "";
         private String title = "";
-        private String artist = "";
+        private List<String> artist = new ArrayList<>();
         private String album = "";
         private String albumArtUrl = "";
         private String url = "";
@@ -70,7 +70,8 @@ public class MprisPlugin extends Plugin {
         }
 
         public String getArtist() {
-            return artist;
+            String artistString = String.join(", ", artist);
+            return artistString;
         }
 
         public String getAlbum() {
@@ -315,7 +316,10 @@ public class MprisPlugin extends Plugin {
                 playerStatus.currentSong = np.getString("nowPlaying", playerStatus.currentSong);
                 //Note: title, artist and album will not be available for all desktop clients
                 playerStatus.title = np.getString("title", playerStatus.title);
-                playerStatus.artist = np.getString("artist", playerStatus.artist);
+                playerStatus.artist = np.getStringList("artist", playerStatus.artist);
+                if (playerStatus.artist == null) {
+                    playerStatus.artist = List.of(np.getString("artist"));
+                }
                 playerStatus.album = np.getString("album", playerStatus.album);
                 playerStatus.url = np.getString("url", playerStatus.url);
                 if (np.has("loopStatus")) {
