@@ -466,7 +466,7 @@
     <string name="website">Website</string>
     <string name="website_url" translatable="false">https://kdeconnect.kde.org/</string>
 
-    <string name="copyright_statement" translatable="false">(С) 2013-2021 The KDE Connect Developers</string>
+    <string name="copyright_statement" translatable="false">(С) 2013-2023 The KDE Connect Developers</string>
 
     <string name="about">About</string>
     <string name="authors">Authors</string>
