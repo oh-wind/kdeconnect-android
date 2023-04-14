@@ -512,7 +512,43 @@ public class SMSHelper {
                         ThreadID nextThreadId = threadIds.get(threadIdsIndex);
                         threadIdsIndex++;
 
-                        List<Message> firstMessage = getMessagesInThread(context, nextThreadId, 1L);
+                        // Use Threads for each actual Thread ID to speed up the process of collecting messages to be display
+                        // Makes use of the available hardware threads to make it faster
+                        // Without threads it takes an endless amount of time to sync messages with app
+                        final Lock lock = new ReentrantLock();
+                        final Condition condition = lock.newCondition();
+                        final List<Message> firstMessage = new ArrayList<>();
+
+                        Thread thread = new Thread(() -> {
+                            // Lock the thread so we can wait for it to finish
+                            lock.lock();
+                            try {
+                                // Run the code to get the messages
+                                firstMessage.addAll(getMessagesInThread(context, nextThreadId, 1L));
+
+                                // Signal that the thread has finished running
+                                condition.signal();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            } finally {
+                                lock.unlock();
+                            }
+                        });
+
+                        // Start the thread
+                        thread.start();
+
+                        // Lock the thread so we can wait for it to finish
+                        lock.lock();
+
+                        // Wait for the thread to finish
+                        try {
+                            condition.await();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        } finally {
+                            lock.unlock();
+                        }
 
                         if (firstMessage.size() > 1) {
                             Log.w("SMSHelper", "getConversations got two messages for the same ThreadID: " + nextThreadId);

@@ -20,6 +20,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
+import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -238,9 +239,39 @@ public class SMSPlugin extends Plugin {
          */
         @Override
         public void onChange(boolean selfChange) {
+            // Should update the mostRecentTimestamp to the latest message in the database
+            // or timestamp is always reported as 0 and fails to send latest message
+            // else sync fails without new timestamp on outgoing and incoming messages
+            mostRecentTimestamp = getLatestMessageTimestamp();
             sendLatestMessage();
         }
 
+    }
+
+    @SuppressLint("Range")
+    public long getLatestMessageTimestamp() {
+        long latestTimestamp = 0;
+        Cursor cursor = null;
+        try {
+            cursor = context.getContentResolver().query(
+                Telephony.Sms.CONTENT_URI,
+                new String[]{Telephony.Sms.DATE},
+                null,
+                null,
+                Telephony.Sms.DATE + " DESC"
+            );
+            if (cursor != null && cursor.moveToFirst()) {
+                latestTimestamp = cursor.getLong(cursor.getColumnIndex(Telephony.Sms.DATE));
+            }
+        } catch (Exception e) {
+            Log.e("SMSPlugin", "Error getting latest message timestamp", e);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return latestTimestamp;
     }
 
     /**
