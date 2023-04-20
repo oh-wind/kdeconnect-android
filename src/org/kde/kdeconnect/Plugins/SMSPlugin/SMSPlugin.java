@@ -242,7 +242,10 @@ public class SMSPlugin extends Plugin {
             // Should update the mostRecentTimestamp to the latest message in the database
             // or timestamp is always reported as 0 and fails to send latest message
             // else sync fails without new timestamp on outgoing and incoming messages
+            mostRecentTimestampLock.lock();
             mostRecentTimestamp = getLatestMessageTimestamp();
+            mostRecentTimestampLock.unlock();
+
             sendLatestMessage();
         }
 
@@ -251,23 +254,52 @@ public class SMSPlugin extends Plugin {
     @SuppressLint("Range")
     public long getLatestMessageTimestamp() {
         long latestTimestamp = 0;
-        Cursor cursor = null;
+
+        // Query SMS messages
+        Cursor smsCursor = null;
         try {
-            cursor = context.getContentResolver().query(
-                Telephony.Sms.CONTENT_URI,
-                new String[]{Telephony.Sms.DATE},
-                null,
-                null,
-                Telephony.Sms.DATE + " DESC"
+            smsCursor = context.getContentResolver().query(
+                    Telephony.Sms.CONTENT_URI,
+                    new String[]{Telephony.Sms.DATE},
+                    null,
+                    null,
+                    Telephony.Sms.DATE + " DESC"
             );
-            if (cursor != null && cursor.moveToFirst()) {
-                latestTimestamp = cursor.getLong(cursor.getColumnIndex(Telephony.Sms.DATE));
+            if (smsCursor != null && smsCursor.moveToFirst()) {
+                long smsTimestamp = smsCursor.getLong(smsCursor.getColumnIndex(Telephony.Sms.DATE));
+                if (smsTimestamp > latestTimestamp) {
+                    latestTimestamp = smsTimestamp;
+                }
             }
         } catch (Exception e) {
-            Log.e("SMSPlugin", "Error getting latest message timestamp", e);
+            Log.e("SMSPlugin", "Error getting latest SMS message timestamp", e);
         } finally {
-            if (cursor != null) {
-                cursor.close();
+            if (smsCursor != null) {
+                smsCursor.close();
+            }
+        }
+
+        // Query MMS messages
+        Cursor mmsCursor = null;
+        try {
+            mmsCursor = context.getContentResolver().query(
+                    Telephony.Mms.CONTENT_URI,
+                    new String[]{Telephony.Mms.DATE_SENT},
+                    null,
+                    null,
+                    Telephony.Mms.DATE_SENT + " DESC"
+            );
+            if (mmsCursor != null && mmsCursor.moveToFirst()) {
+                long mmsTimestamp = mmsCursor.getLong(mmsCursor.getColumnIndex(Telephony.Mms.DATE_SENT));
+                if (mmsTimestamp > latestTimestamp) {
+                    latestTimestamp = mmsTimestamp;
+                }
+            }
+        } catch (Exception e) {
+            Log.e("SMSPlugin", "Error getting latest MMS message timestamp", e);
+        } finally {
+            if (mmsCursor != null) {
+                mmsCursor.close();
             }
         }
 

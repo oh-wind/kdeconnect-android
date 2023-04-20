@@ -59,6 +59,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -299,7 +302,7 @@ public class SMSHelper {
                         // Try to determine using other information
                         int messageBoxColumn = myCursor.getColumnIndex(Telephony.Mms.MESSAGE_BOX);
                         // MessageBoxColumn is defined for MMS only
-                        boolean messageBoxExists = !myCursor.isNull(messageBoxColumn);
+                        boolean messageBoxExists = (messageBoxColumn != -1) && (!myCursor.isNull(messageBoxColumn));
                         if (messageBoxExists) {
                             transportType = TransportType.MMS;
                         } else {
@@ -512,54 +515,29 @@ public class SMSHelper {
                         ThreadID nextThreadId = threadIds.get(threadIdsIndex);
                         threadIdsIndex++;
 
-                        // Use Threads for each actual Thread ID to speed up the process of collecting messages to be display
-                        // Makes use of the available hardware threads to make it faster
+                        // Use Threads for each actual Thread ID to speed up the process of collecting messages to be displayed
                         // Without threads it takes an endless amount of time to sync messages with app
-                        final Lock lock = new ReentrantLock();
-                        final Condition condition = lock.newCondition();
                         final List<Message> firstMessage = new ArrayList<>();
 
-                        Thread thread = new Thread(() -> {
-                            // Lock the thread so we can wait for it to finish
-                            lock.lock();
-                            try {
-                                // Run the code to get the messages
-                                firstMessage.addAll(getMessagesInThread(context, nextThreadId, 1L));
+                        Callable<List<Message>> fetchMessageCallable = () -> getMessagesInThread(context, nextThreadId, 1L);
 
-                                // Signal that the thread has finished running
-                                condition.signal();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            } finally {
-                                lock.unlock();
-                            }
-                        });
-
-                        // Start the thread
-                        thread.start();
-
-                        // Lock the thread so we can wait for it to finish
-                        lock.lock();
-
-                        // Wait for the thread to finish
+                        Future<List<Message>> future = ThreadHelper.executeCallable(fetchMessageCallable);
                         try {
-                            condition.await();
-                        } catch (InterruptedException e) {
+                            List<Message> messages = future.get();
+                            firstMessage.addAll(messages);
+                        } catch (InterruptedException | ExecutionException e) {
                             e.printStackTrace();
-                        } finally {
-                            lock.unlock();
                         }
 
                         if (firstMessage.size() > 1) {
                             Log.w("SMSHelper", "getConversations got two messages for the same ThreadID: " + nextThreadId);
                         }
 
-                        if (firstMessage.size() == 0)
-                        {
-                            Log.e("SMSHelper", "ThreadID: " + nextThreadId + " did not return any messages");
+                        if (firstMessage.size() == 0) {
                             // This is a strange issue, but I don't know how to say what is wrong, so just continue along
                             return this.next();
                         }
+
                         return firstMessage.get(0);
                     }
                 };
