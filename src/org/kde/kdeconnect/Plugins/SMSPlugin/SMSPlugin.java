@@ -20,6 +20,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
+import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -238,10 +239,70 @@ public class SMSPlugin extends Plugin {
          */
         @Override
         public void onChange(boolean selfChange) {
+            mostRecentTimestampLock.lock();
+            mostRecentTimestamp = getLatestMessageTimestamp();
+            mostRecentTimestampLock.unlock();
+
             sendLatestMessage();
         }
 
     }
+
+    @SuppressLint("Range")
+    public long getLatestMessageTimestamp() {
+        long latestTimestamp = 0;
+
+        // Query SMS messages
+        Cursor smsCursor = null;
+        try {
+            smsCursor = context.getContentResolver().query(
+                    Telephony.Sms.CONTENT_URI,
+                    new String[]{Telephony.Sms.DATE},
+                    null,
+                    null,
+                    Telephony.Sms.DATE + " DESC"
+            );
+            if (smsCursor != null && smsCursor.moveToFirst()) {
+                long smsTimestamp = smsCursor.getLong(smsCursor.getColumnIndex(Telephony.Sms.DATE));
+                if (smsTimestamp > latestTimestamp) {
+                    latestTimestamp = smsTimestamp;
+                }
+            }
+        } catch (Exception e) {
+            Log.e("SMSPlugin", "Error getting latest SMS message timestamp", e);
+        } finally {
+            if (smsCursor != null) {
+                smsCursor.close();
+            }
+        }
+
+        // Query MMS messages
+        Cursor mmsCursor = null;
+        try {
+            mmsCursor = context.getContentResolver().query(
+                    Telephony.Mms.CONTENT_URI,
+                    new String[]{Telephony.Mms.DATE_SENT},
+                    null,
+                    null,
+                    Telephony.Mms.DATE_SENT + " DESC"
+            );
+            if (mmsCursor != null && mmsCursor.moveToFirst()) {
+                long mmsTimestamp = mmsCursor.getLong(mmsCursor.getColumnIndex(Telephony.Mms.DATE_SENT));
+                if (mmsTimestamp > latestTimestamp) {
+                    latestTimestamp = mmsTimestamp;
+                }
+            }
+        } catch (Exception e) {
+            Log.e("SMSPlugin", "Error getting latest MMS message timestamp", e);
+        } finally {
+            if (mmsCursor != null) {
+                mmsCursor.close();
+            }
+        }
+
+        return latestTimestamp;
+    }
+
 
     /**
      * This receiver will be invoked only when the app will be set as the default sms app
