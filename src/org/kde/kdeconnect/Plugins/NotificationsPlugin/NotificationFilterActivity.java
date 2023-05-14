@@ -25,6 +25,7 @@ import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.CheckedTextView;
+import android.widget.Filter;
 import android.widget.ListView;
 
 import androidx.appcompat.app.AlertDialog;
@@ -60,9 +61,9 @@ public class NotificationFilterActivity extends AppCompatActivity {
         boolean isEnabled;
     }
 
+    // This variable stores all app information and serves as a data source for filtering.
     private List<AppListInfo> mAllApps;
-    private List<AppListInfo> apps;
-    private String        filterNames;
+    private List<AppListInfo> apps; // Filtered data.
 
     class AppListAdapter extends BaseAdapter {
 
@@ -90,10 +91,13 @@ public class NotificationFilterActivity extends AppCompatActivity {
             if (position == 0) {
                 checkedTextView.setText(R.string.all);
                 TextViewCompat.setCompoundDrawablesRelativeWithIntrinsicBounds(checkedTextView, null, null, null, null);
+                binding.lvFilterApps.setItemChecked(position, appDatabase.getAllEnabled());
             } else {
-                checkedTextView.setText(apps.get(position - 1).name);
-                TextViewCompat.setCompoundDrawablesRelativeWithIntrinsicBounds(checkedTextView, apps.get(position - 1).icon, null, null, null);
+                final AppListInfo info = apps.get(position - 1);
+                checkedTextView.setText(info.name);
+                TextViewCompat.setCompoundDrawablesRelativeWithIntrinsicBounds(checkedTextView, info.icon, null, null, null);
                 checkedTextView.setCompoundDrawablePadding((int) (8 * getResources().getDisplayMetrics().density));
+                binding.lvFilterApps.setItemChecked(position, info.isEnabled);
             }
 
             return view;
@@ -160,14 +164,16 @@ public class NotificationFilterActivity extends AppCompatActivity {
         listView.setOnItemClickListener((adapterView, view, i, l) -> {
             if (i == 0) {
                 boolean enabled = listView.isItemChecked(0);
-                for (int j = 0; j < apps.size(); j++) {
-                    listView.setItemChecked(j, enabled);
+                for (int j = 0; j < mAllApps.size(); j++) {
+                    mAllApps.get(j).isEnabled = enabled;
                 }
                 appDatabase.setAllEnabled(enabled);
+                ((AppListAdapter) adapterView.getAdapter()).notifyDataSetChanged();
             } else {
                 boolean checked = listView.isItemChecked(i);
-                appDatabase.setEnabled(apps.get(i - 1).pkg, checked);
                 apps.get(i - 1).isEnabled = checked;
+                appDatabase.setEnabled(apps.get(i - 1).pkg, checked);
+                ((AppListAdapter) adapterView.getAdapter()).notifyDataSetChanged();
             }
         });
         listView.setOnItemLongClickListener((adapterView, view, i, l) -> {
@@ -272,16 +278,14 @@ public class NotificationFilterActivity extends AppCompatActivity {
             @Override
             public boolean onQueryTextChange(String newText) {
                 if(mAllApps == null) return false;
-                filterNames = newText;
-                if(filterNames.isEmpty()){
-                    apps = mAllApps;
+                apps.clear();
+                if(newText.isEmpty()){
+                    apps.addAll(mAllApps);
                 } else {
-                    apps = new ArrayList<>(mAllApps.size());
                     for (AppListInfo s : mAllApps) {
-                        if (s.name.contains(filterNames))
+                        if (s.name.toLowerCase().contains(newText.toLowerCase().trim()))
                             apps.add(s);
                     }
-                    if(apps.size() == 0) return true;
                 }
 
                 final ListView listView = binding.lvFilterApps;
