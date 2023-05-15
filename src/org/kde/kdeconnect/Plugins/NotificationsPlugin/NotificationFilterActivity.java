@@ -25,7 +25,6 @@ import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.CheckedTextView;
-import android.widget.Filter;
 import android.widget.ListView;
 
 import androidx.appcompat.app.AlertDialog;
@@ -288,8 +287,7 @@ public class NotificationFilterActivity extends AppCompatActivity {
                     }
                 }
 
-                final ListView listView = binding.lvFilterApps;
-                ((AppListAdapter)listView.getAdapter()).notifyDataSetChanged();
+                ((AppListAdapter) binding.lvFilterApps.getAdapter()).notifyDataSetChanged();
                 return true;
             }
         });
